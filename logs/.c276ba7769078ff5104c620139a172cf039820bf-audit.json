@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "C:\\quran-agent\\logs\\.c276ba7769078ff5104c620139a172cf039820bf-audit.json",
+    "files": [
+        {
+            "date": 1767044479034,
+            "name": "C:\\quran-agent\\logs\\mcp-puppeteer-2025-12-30.log",
+            "hash": "602a015699c3fbcfa40dda0b8233313f2be13c8b1da5bf247d584f819ff36fa3"
+        }
+    ],
+    "hashType": "sha256"
+}
