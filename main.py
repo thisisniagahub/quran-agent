@@ -20,6 +20,7 @@ from models.transcriber import QuranTranscriber
 from preprocessing.noise_robustness import AudioCleaner
 from preprocessing.audio_normalization import AudioNormalizer
 from evaluation.benchmarks import ModelBenchmarker
+from preprocessing.arabic_utils import normalize_arabic, trim_istiadzah
 import jiwer
 
 app = FastAPI(
@@ -132,17 +133,12 @@ async def analyze_audio(
                 # Fallback to simple Arabic text if dataset not found
                 reference_text = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ"
 
-            # Normalize both reference and hypothesis for fair comparison
-            # Remove punctuation and extra whitespace
-            def normalize_text(text):
-                # Remove common Arabic punctuation and diacritics for comparison
-                text = re.sub(r'[ًٌٍَُِّْ،؛؟\.,!?;:]', '', text)
-                # Remove extra whitespace
-                text = ' '.join(text.split())
-                return text.strip()
+            # Trim Isti'adzah from start of transcription to align with reference
+            transcription = trim_istiadzah(transcription)
 
-            normalized_reference = normalize_text(reference_text)
-            normalized_transcription = normalize_text(transcription)
+            # Normalize both reference and hypothesis for fair comparison
+            normalized_reference = normalize_arabic(reference_text)
+            normalized_transcription = normalize_arabic(transcription)
 
             # Calculate Word Error Rate using jiwer with normalized texts
             wer = jiwer.wer(normalized_reference, normalized_transcription)

@@ -5,7 +5,7 @@ from typing import Optional
 class QuranTranscriber:
     def __init__(self):
         """Initialize the Quran transcriber with Whisper model."""
-        self.model = whisper.load_model("base")
+        self.model = whisper.load_model("small")
     
     def transcribe(self, audio_path: str) -> str:
         """Transcribe audio file and return the transcribed text.
