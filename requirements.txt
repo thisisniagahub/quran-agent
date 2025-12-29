@@ -1,0 +1,29 @@
+# Quran Teaching AI Agent - Requirements
+
+# Core audio processing
+librosa>=0.10.0
+noisereduce>=3.0.0
+soundfile>=0.12.1
+pydub>=0.25.1
+
+# Audio normalization and loudness
+pyloudnorm>=0.1.0
+
+# ASR evaluation
+jiwer>=4.0.0
+
+# Data processing and analysis
+pandas>=2.0.0
+numpy>=1.22.0
+scipy>=1.10.0
+scikit-learn>=1.3.0
+
+# Web and API
+fastapi>=0.100.0
+uvicorn>=0.20.0
+python-multipart>=0.0.6
+pyyaml>=6.0
+
+# Scientific computing
+numba>=0.58.0
+soxr>=0.3.2
