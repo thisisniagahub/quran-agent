@@ -1,0 +1,693 @@
+openapi: 3.0.3
+info:
+  title: Quran Teaching AI Agent API
+  description: Advanced Quranic recitation analysis and teaching system with tajwid-focused audio processing
+  version: 1.0.0
+  contact:
+    name: Quran AI Agent Development Team
+    email: quran-agent@islamic-tech.org
+
+servers:
+  - url: https://api.quran-agent.com/v1
+    description: Production server
+  - url: https://staging.quran-agent.com/v1
+    description: Staging server
+
+paths:
+  /analyze/audio:
+    post:
+      summary: Analyze Quran recitation audio
+      description: Performs phoneme-level forced alignment and tajwid rule analysis on uploaded audio
+      operationId: analyzeAudio
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - audio
+                - uthmani_text
+                - learner_id
+              properties:
+                audio:
+                  type: string
+                  format: binary
+                  description: Audio file of Quran recitation (WAV, MP3, FLAC)
+                uthmani_text:
+                  type: string
+                  description: Uthmani mushaf text for alignment reference
+                learner_id:
+                  type: string
+                  format: uuid
+                  description: Unique identifier for the learner
+                reference_qari:
+                  type: string
+                  description: Reference qari for comparison (optional)
+                analysis_level:
+                  type: string
+                  enum: [basic, detailed, comprehensive]
+                  default: detailed
+                  description: Level of analysis detail required
+      responses:
+        '200':
+          description: Successful analysis result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuranAudioAnalysis'
+          examples:
+            beginnerAnalysis:
+              summary: "Beginner reciting Al-Fatihah with makhraj errors"
+              value:
+                audioId: "rec_001_20240115"
+                recitation: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ"
+                alignment: []
+                tajwid_analysis:
+                  madd_violations: []
+                  ghunnah_violations: []
+                  ikhfa_violations: []
+                  idgham_violations: []
+                  qalqalah_violations: []
+                overall_metrics:
+                  qwer_score: 0.68
+                  level: "Beginner"
+                  dominant_errors: ["ra_rolling", "ha_guttural"]
+                  accuracy_percentage: 68.0
+                processing_metadata:
+                  processing_time: 1.8
+                  audio_quality_score: 0.85
+                  confidence_level: "medium"
+        '400':
+          description: Invalid input parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Audio quality insufficient for analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /agent/feedback:
+    post:
+      summary: Generate personalized feedback
+      description: Provides detailed feedback based on audio analysis and learner profile
+      operationId: generateFeedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - analysis_result
+                - learner_id
+              properties:
+                analysis_result:
+                  $ref: '#/components/schemas/QuranAudioAnalysis'
+                learner_id:
+                  type: string
+                  format: uuid
+                  description: Unique identifier for the learner
+                feedback_type:
+                  type: string
+                  enum: [detailed, summary, focused]
+                  default: detailed
+                  description: Type of feedback to generate
+      responses:
+        '200':
+          description: Personalized feedback
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackResponse'
+          examples:
+            detailedFeedback:
+              summary: "Detailed feedback for beginner with makhraj errors"
+              value:
+                feedback_id: "fb_001_20240115"
+                analysis_result:
+                  audioId: "rec_001_20240115"
+                  recitation: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ"
+                  overall_metrics:
+                    qwer_score: 0.68
+                    level: "Beginner"
+                    dominant_errors: ["ra_rolling", "ha_guttural"]
+                personalized_feedback:
+                  overall_assessment: "Good effort with room for improvement in articulation"
+                  strength_areas: ["proper pacing", "clear pronunciation of vowels"]
+                  improvement_areas: ["ra letter articulation", "ha sound production"]
+                  specific_corrections: []
+                recommendations: []
+                next_steps: ["practice ra letter isolation", "focus on throat positioning"]
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Learner profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /agent/next-lesson:
+    get:
+      summary: Get next recommended lesson
+      description: Retrieves the next lesson plan based on learner progress and error analysis
+      operationId: getNextLesson
+      parameters:
+        - name: learner_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Unique identifier for the learner
+        - name: include_alternatives
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Include alternative lesson options
+      responses:
+        '200':
+          description: Next lesson recommendation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LessonRecommendation'
+          examples:
+            makhrajFocusLesson:
+              summary: "Makhraj-focused lesson for persistent ra rolling error"
+              value:
+                recommendation:
+                  next_lesson:
+                    lesson_id: "lesson_001_20240115"
+                    topic: "Makhraj Isolation: Ra Letter"
+                    focus_areas: ["ra_rolling", "tongue_position"]
+                    difficulty: "beginner"
+                    duration: 12
+                    objectives: ["Improve ra letter articulation"]
+                    exercises: []
+                    prerequisites: []
+                  confidence: 0.88
+                  reasoning: "Persistent ra rolling error detected 5 times in recent sessions"
+                  alternative_options: []
+                  estimated_improvement: 0.2
+                alternatives: []
+        '404':
+          description: Learner profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    QuranAudioAnalysis:
+      type: object
+      required:
+        - audioId
+        - recitation
+        - alignment
+        - tajwid_analysis
+        - overall_metrics
+      properties:
+        audioId:
+          type: string
+          description: Unique identifier for the audio recording
+        recitation:
+          type: string
+          description: The Arabic text being recited
+        alignment:
+          type: array
+          description: Phoneme-level forced alignment results
+          items:
+            $ref: '#/components/schemas/PhonemeAlignment'
+        tajwid_analysis:
+          $ref: '#/components/schemas/TajwidAnalysis'
+        overall_metrics:
+          $ref: '#/components/schemas/OverallMetrics'
+        processing_metadata:
+          $ref: '#/components/schemas/ProcessingMetadata'
+
+    PhonemeAlignment:
+      type: object
+      required:
+        - phoneme
+        - start_time
+        - end_time
+        - confidence
+        - tajwid_rule
+        - tajwid_confidence
+      properties:
+        phoneme:
+          type: string
+          description: Arabic phoneme representation
+        start_time:
+          type: number
+          format: float
+          minimum: 0
+          description: Start time in seconds
+        end_time:
+          type: number
+          format: float
+          minimum: 0
+          description: End time in seconds
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Confidence score for this phoneme
+        tajwid_rule:
+          type: string
+          enum: [madd, ghunnah, ikhfa, idgham, qalqalah, waqf, normal]
+          description: Tajwid rule applied to this phoneme
+        tajwid_confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Confidence score for tajwid rule application
+        harakat:
+          type: string
+          enum: [fatha, kasra, damma, sukun, shadda, tanwin_fath, tanwin_kasr, tanwin_damm, none]
+          description: Harakat applied to this phoneme
+        harakat_timing:
+          type: number
+          format: float
+          minimum: 0
+          description: Duration of harakat in seconds
+
+    TajwidAnalysis:
+      type: object
+      properties:
+        madd_violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TajwidViolation'
+        ghunnah_violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/GhunnahViolation'
+        ikhfa_violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TajwidViolation'
+        idgham_violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/IdghamViolation'
+        qalqalah_violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/QalqalahViolation'
+
+    TajwidViolation:
+      type: object
+      properties:
+        position:
+          type: number
+          description: Position in the recitation
+        severity:
+          type: string
+          enum: [minor, moderate, major]
+          description: Severity of the violation
+
+    GhunnahViolation:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/TajwidViolation'
+      properties:
+        nasal_energy:
+          type: number
+          format: float
+          description: Measured nasal energy
+        duration:
+          type: number
+          format: float
+          description: Duration of ghunnah
+
+    IdghamViolation:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/TajwidViolation'
+      properties:
+        type:
+          type: string
+          enum: [with_ghunnah, without_ghunnah, mimi]
+          description: Type of idgham
+
+    QalqalahViolation:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/TajwidViolation'
+      properties:
+        intensity:
+          type: number
+          format: float
+          description: Intensity of qalqalah
+
+    OverallMetrics:
+      type: object
+      required:
+        - qwer_score
+        - level
+        - dominant_errors
+        - accuracy_percentage
+      properties:
+        qwer_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Quran Weighted Error Rate score
+        level:
+          type: string
+          enum: [Beginner, Intermediate, Advanced]
+          description: Learner level assessment
+        dominant_errors:
+          type: array
+          items:
+            type: string
+          description: List of dominant error types
+        accuracy_percentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: Overall accuracy percentage
+        detailed_analysis:
+          $ref: '#/components/schemas/DetailedAnalysis'
+
+    DetailedAnalysis:
+      type: object
+      properties:
+        makhraj_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        tajwid_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        harakat_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        rhythm_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+
+    ProcessingMetadata:
+      type: object
+      properties:
+        processing_time:
+          type: number
+          format: float
+          description: Time taken for processing in seconds
+        audio_quality_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Quality score of input audio
+        confidence_level:
+          type: string
+          enum: [high, medium, low]
+          description: Overall confidence in analysis
+
+    FeedbackResponse:
+      type: object
+      required:
+        - feedback_id
+        - analysis_result
+        - personalized_feedback
+        - recommendations
+      properties:
+        feedback_id:
+          type: string
+          format: uuid
+          description: Unique identifier for this feedback
+        analysis_result:
+          $ref: '#/components/schemas/QuranAudioAnalysis'
+        personalized_feedback:
+          type: object
+          properties:
+            overall_assessment:
+              type: string
+              description: Overall assessment of the recitation
+            strength_areas:
+              type: array
+              items:
+                type: string
+              description: Areas where the learner performed well
+            improvement_areas:
+              type: array
+              items:
+                type: string
+              description: Areas needing improvement
+            specific_corrections:
+              type: array
+              items:
+                $ref: '#/components/schemas/SpecificCorrection'
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recommendation'
+        next_steps:
+          type: array
+          items:
+            type: string
+          description: Recommended next steps for improvement
+
+    SpecificCorrection:
+      type: object
+      properties:
+        position:
+          type: number
+          description: Position in the recitation where correction is needed
+        current_pronunciation:
+          type: string
+          description: Current pronunciation
+        correct_pronunciation:
+          type: string
+          description: Correct pronunciation
+        rule_violated:
+          type: string
+          description: Rule that was violated
+        explanation:
+          type: string
+          description: Explanation of the correction needed
+
+    Recommendation:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [practice, study, listen, avoid]
+          description: Type of recommendation
+        focus_area:
+          type: string
+          description: Area of focus
+        suggested_exercise:
+          type: string
+          description: Suggested exercise or practice
+        priority:
+          type: string
+          enum: [high, medium, low]
+          description: Priority level of recommendation
+
+    LessonRecommendation:
+      type: object
+      required:
+        - recommendation
+      properties:
+        recommendation:
+          $ref: '#/components/schemas/PolicyRecommendation'
+        alternatives:
+          type: array
+          items:
+            $ref: '#/components/schemas/LessonPlan'
+          description: Alternative lesson options
+
+    PolicyRecommendation:
+      type: object
+      required:
+        - next_lesson
+        - confidence
+        - reasoning
+        - estimated_improvement
+      properties:
+        next_lesson:
+          $ref: '#/components/schemas/LessonPlan'
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Confidence in the recommendation
+        reasoning:
+          type: string
+          description: Reasoning behind the recommendation
+        alternative_options:
+          type: array
+          items:
+            $ref: '#/components/schemas/LessonPlan'
+          description: Alternative lesson options
+        estimated_improvement:
+          type: number
+          format: float
+          description: Expected Q-WER improvement
+
+    LessonPlan:
+      type: object
+      required:
+        - lesson_id
+        - topic
+        - focus_areas
+        - difficulty
+        - duration
+        - objectives
+        - exercises
+      properties:
+        lesson_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the lesson
+        topic:
+          type: string
+          description: Main topic of the lesson
+        focus_areas:
+          type: array
+          items:
+            type: string
+          description: Areas of focus for the lesson
+        difficulty:
+          type: string
+          enum: [beginner, intermediate, advanced]
+          description: Difficulty level
+        duration:
+          type: number
+          format: int32
+          description: Duration in minutes
+        objectives:
+          type: array
+          items:
+            type: string
+          description: Learning objectives
+        exercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/LessonExercise'
+        prerequisites:
+          type: array
+          items:
+            type: string
+          description: Prerequisites for this lesson
+
+    LessonExercise:
+      type: object
+      required:
+        - type
+        - content
+        - repetitions
+        - expected_mastery
+      properties:
+        type:
+          type: string
+          enum: [phoneme_isolation, tajwid_focus, rhythm_practice, full_verse, makhraj_drill]
+          description: Type of exercise
+        content:
+          type: string
+          description: Arabic text to practice
+        target_errors:
+          type: array
+          items:
+            type: string
+          description: Specific errors this exercise addresses
+        repetitions:
+          type: number
+          format: int32
+          description: Number of repetitions
+        expected_mastery:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Expected mastery level
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          description: Additional error details
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp of the error
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authentication
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Analysis
+    description: Audio analysis and tajwid evaluation
+  - name: Feedback
+    description: Personalized feedback generation
+  - name: Lessons
+    description: Lesson planning and recommendations

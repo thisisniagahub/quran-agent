@@ -1,0 +1,154 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Quran Audio Analysis Schema",
+  "description": "Schema for Quran-native audio analysis with tajwid rules and phoneme-level alignment",
+  "properties": {
+    "audioId": {
+      "type": "string",
+      "description": "Unique identifier for the audio recording"
+    },
+    "recitation": {
+      "type": "string",
+      "description": "The Arabic text being recited"
+    },
+    "alignment": {
+      "type": "array",
+      "description": "Phoneme-level forced alignment results",
+      "items": {
+        "type": "object",
+        "properties": {
+          "phoneme": {
+            "type": "string",
+            "description": "Arabic phoneme representation"
+          },
+          "start_time": {
+            "type": "number",
+            "description": "Start time in seconds",
+            "minimum": 0
+          },
+          "end_time": {
+            "type": "number",
+            "description": "End time in seconds",
+            "minimum": 0
+          },
+          "confidence": {
+            "type": "number",
+            "description": "Confidence score for this phoneme",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "tajwid_rule": {
+            "type": "string",
+            "enum": ["madd", "ghunnah", "ikhfa", "idgham", "qalqalah", "waqf", "normal"],
+            "description": "Tajwid rule applied to this phoneme"
+          },
+          "tajwid_confidence": {
+            "type": "number",
+            "description": "Confidence score for tajwid rule application",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "harakat": {
+            "type": "string",
+            "enum": ["fatha", "kasra", "damma", "sukun", "shadda", "tanwin_fath", "tanwin_kasr", "tanwin_damm", "none"],
+            "description": "Harakat applied to this phoneme"
+          },
+          "harakat_timing": {
+            "type": "number",
+            "description": "Duration of harakat in seconds",
+            "minimum": 0
+          }
+        },
+        "required": ["phoneme", "start_time", "end_time", "confidence", "tajwid_rule", "tajwid_confidence"]
+      }
+    },
+    "tajwid_analysis": {
+      "type": "object",
+      "properties": {
+        "madd_violations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "position": { "type": "number" },
+              "expected_duration": { "type": "number" },
+              "actual_duration": { "type": "number" },
+              "severity": { "type": "string", "enum": ["minor", "moderate", "major"] }
+            }
+          }
+        },
+        "ghunnah_violations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "position": { "type": "number" },
+              "nasal_energy": { "type": "number" },
+              "duration": { "type": "number" },
+              "severity": { "type": "string", "enum": ["minor", "moderate", "major"] }
+            }
+          }
+        },
+        "ikhfa_violations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "position": { "type": "number" },
+              "articulation_point": { "type": "string" },
+              "severity": { "type": "string", "enum": ["minor", "moderate", "major"] }
+            }
+          }
+        },
+        "idgham_violations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "position": { "type": "number" },
+              "type": { "type": "string", "enum": ["with_ghunnah", "without_ghunnah", "mimi"] },
+              "severity": { "type": "string", "enum": ["minor", "moderate", "major"] }
+            }
+          }
+        },
+        "qalqalah_violations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "position": { "type": "number" },
+              "intensity": { "type": "number" },
+              "severity": { "type": "string", "enum": ["minor", "moderate", "major"] }
+            }
+          }
+        }
+      }
+    },
+    "overall_metrics": {
+      "type": "object",
+      "properties": {
+        "qwer_score": {
+          "type": "number",
+          "description": "Quran Weighted Error Rate score",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "level": {
+          "type": "string",
+          "enum": ["Beginner", "Intermediate", "Advanced"]
+        },
+        "dominant_errors": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "accuracy_percentage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    }
+  },
+  "required": ["audioId", "recitation", "alignment", "tajwid_analysis", "overall_metrics"]
+}
