@@ -1,12 +1,16 @@
 import axios from 'axios';
+import fs from 'fs';
 import FormData from 'form-data';
-import * as fs from 'fs';
-import * as path from 'path';
 
 /**
- * Sends audio file to Python API for analysis
- * @param filePath - Path to the audio file to be analyzed
- * @returns Promise resolving to the analysis response from Python server
+ * Bridge module to connect TypeScript agent to Python API
+ * Handles audio file uploads and API communication
+ */
+
+/**
+ * Sends an audio file to the Python API for processing
+ * @param filePath - Path to the audio file to be processed
+ * @returns Promise resolving to the API response
  */
 export async function sendAudioToProcessor(filePath: string): Promise<any> {
   try {
@@ -15,45 +19,52 @@ export async function sendAudioToProcessor(filePath: string): Promise<any> {
       throw new Error(`File does not exist: ${filePath}`);
     }
 
-    // Create FormData instance to send file
+    // Create FormData instance to send the file
     const formData = new FormData();
     
     // Append the audio file to the form data
     formData.append('file', fs.createReadStream(filePath));
     
-    // You can also append expected text if needed
-    // formData.append('expected_text', 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ'); // Example Uthmani text
+    // Optional: You can also append expected_text if needed
+    // formData.append('expected_text', ''); // Add expected text if available
 
-    console.log(`Sending audio file to Python API: ${filePath}`);
+    console.log(`Sending audio file to API: ${filePath}`);
     
-    // Send POST request to Python FastAPI server
+    // Send POST request to the Python API
     const response = await axios.post('http://localhost:8000/analyze/audio', formData, {
       headers: {
-        ...formData.getHeaders(),
+        ...formData.getHeaders(), // This sets the correct Content-Type for multipart/form-data
       },
       timeout: 30000, // 30 second timeout
     });
 
-    console.log('Response received from Python server:');
+    console.log('API Response received:');
     console.log(JSON.stringify(response.data, null, 2));
     
     return response.data;
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error('Axios error when sending to Python API:', error.response?.data || error.message);
-      throw new Error(`API request failed: ${error.response?.data?.detail || error.message}`);
+  } catch (error: any) {
+    console.error('Error sending audio to processor:', error.message);
+    
+    if (error.response) {
+      // Server responded with error status
+      console.error('API Error Response:', error.response.status, error.response.data);
+    } else if (error.request) {
+      // Request was made but no response received
+      console.error('No response received from API:', error.request);
     } else {
-      console.error('Error sending audio to processor:', error);
-      throw error;
+      // Something else happened
+      console.error('Request setup error:', error.message);
     }
+    
+    throw error;
   }
 }
 
 /**
- * Alternative function to send audio with expected text
- * @param filePath - Path to the audio file to be analyzed
- * @param expectedText - Expected Arabic text for alignment (optional)
- * @returns Promise resolving to the analysis response from Python server
+ * Alternative function to send audio with additional parameters
+ * @param filePath - Path to the audio file to be processed
+ * @param expectedText - Optional expected text for comparison
+ * @returns Promise resolving to the API response
  */
 export async function sendAudioToProcessorWithText(filePath: string, expectedText: string = ''): Promise<any> {
   try {
@@ -68,9 +79,9 @@ export async function sendAudioToProcessorWithText(filePath: string, expectedTex
       formData.append('expected_text', expectedText);
     }
 
-    console.log(`Sending audio file to Python API: ${filePath}`);
+    console.log(`Sending audio file to API: ${filePath}`);
     if (expectedText) {
-      console.log(`Expected text: ${expectedText}`);
+      console.log(`With expected text: ${expectedText.substring(0, 50)}...`);
     }
     
     const response = await axios.post('http://localhost:8000/analyze/audio', formData, {
@@ -80,34 +91,35 @@ export async function sendAudioToProcessorWithText(filePath: string, expectedTex
       timeout: 30000,
     });
 
-    console.log('Response received from Python server:');
+    console.log('API Response received:');
     console.log(JSON.stringify(response.data, null, 2));
     
     return response.data;
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error('Axios error when sending to Python API:', error.response?.data || error.message);
-      throw new Error(`API request failed: ${error.response?.data?.detail || error.message}`);
+  } catch (error: any) {
+    console.error('Error sending audio to processor:', error.message);
+    
+    if (error.response) {
+      console.error('API Error Response:', error.response.status, error.response.data);
+    } else if (error.request) {
+      console.error('No response received from API:', error.request);
     } else {
-      console.error('Error sending audio to processor:', error);
-      throw error;
+      console.error('Request setup error:', error.message);
     }
+    
+    throw error;
   }
 }
 
 // Example usage function
-export async function testConnection(): Promise<void> {
-  console.log('Testing connection to Python API...');
-  
+export async function exampleUsage() {
   try {
-    // This would test with a real audio file if available
-    console.log('Bridge functions ready for use');
+    // Example call - replace with actual file path
+    const result = await sendAudioToProcessor('./sample_audio.wav');
+    console.log('Processing completed successfully');
+    return result;
   } catch (error) {
-    console.error('Test connection failed:', error);
+    console.error('Processing failed:', error);
   }
 }
 
-// Run test if this file is executed directly
-if (require.main === module) {
-  testConnection();
-}
+export default sendAudioToProcessor;

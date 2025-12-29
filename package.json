@@ -21,9 +21,9 @@
   "author": "Quran AI Team",
   "license": "MIT",
   "dependencies": {
-    "fastapi": "^0.100.0",
-    "uvicorn": "^0.20.0",
-    "python-multipart": "^0.0.6"
+    "axios": "^1.6.0",
+    "form-data": "^4.0.0",
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
