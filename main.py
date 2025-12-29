@@ -3,25 +3,33 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import numpy as np
 import librosa
+import soundfile as sf
 import io
 import json
+import tempfile
+import os
+import re
 from typing import Dict, Any
 from pydantic import BaseModel
 
 # Import our modules
 import sys
-import os
 sys.path.append(os.path.join(os.path.dirname(__file__)))
 
+from models.transcriber import QuranTranscriber
 from preprocessing.noise_robustness import AudioCleaner
 from preprocessing.audio_normalization import AudioNormalizer
 from evaluation.benchmarks import ModelBenchmarker
+import jiwer
 
 app = FastAPI(
     title="Quran Teaching AI Agent API",
     description="Advanced Quranic recitation analysis and teaching system with tajwid-focused audio processing",
     version="1.0.0"
 )
+
+# Initialize transcriber globally
+transcriber = QuranTranscriber()
 
 # Add CORS middleware
 app.add_middleware(
@@ -81,61 +89,120 @@ async def analyze_audio(
         # Validate file type
         if not file.content_type or not file.content_type.startswith('audio/'):
             raise HTTPException(status_code=400, detail="File must be an audio file")
-        
-        # Read audio file
-        contents = await file.read()
-        audio_bytes = io.BytesIO(contents)
-        
-        # Load audio using librosa
-        audio_data, sample_rate = librosa.load(audio_bytes, sr=22050)
-        
-        # Get audio info
-        duration = librosa.get_duration(y=audio_data, sr=sample_rate)
-        channels = 1 if audio_data.ndim == 1 else audio_data.shape[0]
-        
-        # Initialize audio processing components
-        cleaner = AudioCleaner(sample_rate=sample_rate)
-        normalizer = AudioNormalizer(sample_rate=sample_rate)
-        
-        # Process audio: clean, normalize, and analyze
-        cleaned_audio = cleaner.remove_stationary_noise(audio_data)
-        enhanced_audio = cleaner.enhance_voice(cleaned_audio)
-        normalized_audio = normalizer.process_quran_audio(enhanced_audio)
-        
-        # For demonstration, we'll create mock analysis since we don't have actual phoneme alignment
-        # In a real implementation, this would use the actual QWER calculation
-        analysis_result = {
-            "qwer": 25.5,
-            "level": "Intermediate",
-            "error_breakdown": {
-                "makhraj": 8.2,
-                "tajwid": 7.1,
-                "harakat": 6.4,
-                "rhythm": 3.8
-            },
-            "total_errors": 12,
-            "total_phonemes": 100,
-            "dominant_error_types": ["makhraj", "tajwid"],
-            "detailed_errors": [
-                {"type": "makhraj", "position": 5, "description": "Incorrect articulation of ra letter"},
-                {"type": "tajwid", "position": 12, "description": "Missing ghunnah rule"}
-            ]
-        }
-        
-        return AudioAnalysisResponse(
-            success=True,
-            message="Audio analysis completed successfully",
-            analysis=QWERAnalysis(**analysis_result),
-            audio_info={
-                "filename": file.filename,
-                "content_type": file.content_type,
-                "duration": round(duration, 2),
-                "sample_rate": sample_rate,
-                "channels": channels,
-                "samples": len(audio_data)
+
+        # Create temporary file for audio processing
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp_file:
+            temp_filename = temp_file.name
+            # Read and save the uploaded file to temporary location
+            contents = await file.read()
+            temp_file.write(contents)
+
+        try:
+            # Load audio using librosa
+            audio_data, sample_rate = librosa.load(temp_filename, sr=22050)
+
+            # Get audio info
+            duration = librosa.get_duration(y=audio_data, sr=sample_rate)
+            channels = 1 if audio_data.ndim == 1 else audio_data.shape[0]
+
+            # Initialize audio processing components - FIX THE BUG: use correct sample_rate
+            cleaner = AudioCleaner(sr=sample_rate)  # Fixed: pass sample_rate to match audio
+            normalizer = AudioNormalizer(sample_rate=sample_rate)
+
+            # Process audio: clean, normalize, and analyze
+            cleaned_audio = cleaner.remove_stationary_noise(audio_data)
+            enhanced_audio = cleaner.enhance_voice(cleaned_audio)
+            normalized_audio = normalizer.process_quran_audio(enhanced_audio)
+
+            # Save processed audio to temporary file for transcription
+            processed_temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.wav')
+            processed_temp_file.close()
+            import soundfile as sf
+            sf.write(processed_temp_file.name, normalized_audio, sample_rate)
+
+            # Transcribe the audio using real Whisper model
+            transcription = transcriber.transcribe(processed_temp_file.name)
+
+            # Load reference text from dataset
+            dataset_path = os.path.join(os.path.dirname(__file__), "dataset", "surah_fatihah.txt")
+            if os.path.exists(dataset_path):
+                with open(dataset_path, 'r', encoding='utf-8') as f:
+                    reference_text = f.read().strip()
+            else:
+                # Fallback to simple Arabic text if dataset not found
+                reference_text = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ"
+
+            # Normalize both reference and hypothesis for fair comparison
+            # Remove punctuation and extra whitespace
+            def normalize_text(text):
+                # Remove common Arabic punctuation and diacritics for comparison
+                text = re.sub(r'[ًٌٍَُِّْ،؛؟\.,!?;:]', '', text)
+                # Remove extra whitespace
+                text = ' '.join(text.split())
+                return text.strip()
+
+            normalized_reference = normalize_text(reference_text)
+            normalized_transcription = normalize_text(transcription)
+
+            # Calculate Word Error Rate using jiwer with normalized texts
+            wer = jiwer.wer(normalized_reference, normalized_transcription)
+
+            # Convert WER to Q-WER (Quran Weighted Error Rate) - for now using same value
+            qwer = wer * 100  # Convert to percentage
+
+            # Determine level based on Q-WER score
+            if qwer < 10:
+                level = "Advanced"
+            elif qwer < 25:
+                level = "Intermediate"
+            else:
+                level = "Beginner"
+
+            # Create error breakdown (simplified for now)
+            error_breakdown = {
+                "makhraj": qwer * 0.3,  # 30% of errors attributed to articulation
+                "tajwid": qwer * 0.4,   # 40% of errors attributed to tajwid
+                "harakat": qwer * 0.2,  # 20% of errors attributed to vowels
+                "rhythm": qwer * 0.1    # 10% of errors attributed to rhythm
             }
-        )
-        
+
+            analysis_result = {
+                "qwer": round(qwer, 2),
+                "level": level,
+                "error_breakdown": error_breakdown,
+                "total_errors": int(qwer * len(reference_text.split()) / 100),  # Estimate total errors
+                "total_phonemes": len(transcription),
+                "dominant_error_types": ["tajwid", "makhraj"],  # Based on highest error values
+                "detailed_errors": [
+                    {"type": "transcription", "position": 0, "description": f"Transcribed: {normalized_transcription}"},
+                    {"type": "reference", "position": 0, "description": f"Expected: {normalized_reference}"},
+                    {"type": "raw_transcription", "position": 0, "description": f"Raw Transcribed: {transcription}"},
+                    {"type": "raw_reference", "position": 0, "description": f"Raw Expected: {reference_text}"}
+                ]
+            }
+
+            return AudioAnalysisResponse(
+                success=True,
+                message="Audio analysis completed successfully",
+                analysis=QWERAnalysis(**analysis_result),
+                audio_info={
+                    "filename": file.filename,
+                    "content_type": file.content_type,
+                    "duration": round(duration, 2),
+                    "sample_rate": sample_rate,
+                    "channels": channels,
+                    "samples": len(audio_data),
+                    "transcription": transcription
+                }
+            )
+
+        finally:
+            # Clean up temporary files
+            if os.path.exists(temp_filename):
+                os.unlink(temp_filename)
+            if 'processed_temp_file' in locals() and os.path.exists(processed_temp_file.name):
+                os.unlink(processed_temp_file.name)
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing audio: {str(e)}")
 

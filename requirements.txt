@@ -12,6 +12,9 @@ pyloudnorm>=0.1.0
 # ASR evaluation
 jiwer>=4.0.0
 
+# Whisper AI
+openai-whisper>=20231117
+
 # Data processing and analysis
 pandas>=2.0.0
 numpy>=1.22.0
