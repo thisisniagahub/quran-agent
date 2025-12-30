@@ -9,6 +9,7 @@ interface AudioRecorderProps {
     onResult: (data: AudioAnalysisResponse) => void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function AudioRecorder({ onResult }: AudioRecorderProps) {
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
