@@ -47,7 +47,6 @@ export default function AudioRecorder({ onResult }: AudioRecorderProps) {
                         headers: { 'Content-Type': 'multipart/form-data' },
                     });
 
-                    // Combine backend data with local audio URL
                     const finalResult: AudioAnalysisResponse = {
                         ...response.data,
                         audioUrl: audioUrl
@@ -90,19 +89,22 @@ export default function AudioRecorder({ onResult }: AudioRecorderProps) {
 
     return (
         <div className="flex flex-col items-center justify-center py-10 w-full max-w-md mx-auto">
-            <div className="relative">
-                {/* Ombak Animation */}
+            <div className="relative group">
+                {/* Glow Effects */}
+                <div className={`absolute inset-0 rounded-full blur-[50px] transition-all duration-700 ${isRecording ? 'bg-pulse-gold/30 scale-125' : 'bg-pulse-deep/20 scale-100 group-hover:scale-110'}`}></div>
+
+                {/* Pulse Waves Animation */}
                 {isRecording && (
                     <>
                         <motion.div
                             animate={{ scale: [1, 2.5], opacity: [0.5, 0] }}
                             transition={{ repeat: Infinity, duration: 1.5, ease: "easeOut" }}
-                            className="absolute inset-0 bg-pulse-glow/30 rounded-full blur-xl"
+                            className="absolute inset-0 bg-pulse-gold/20 rounded-full blur-xl"
                         />
                         <motion.div
                             animate={{ scale: [1, 1.8], opacity: [0.6, 0] }}
                             transition={{ repeat: Infinity, duration: 1.5, delay: 0.5, ease: "easeOut" }}
-                            className="absolute inset-0 bg-pulse-deep/40 rounded-full blur-md"
+                            className="absolute inset-0 bg-pulse-glow/20 rounded-full blur-md"
                         />
                     </>
                 )}
@@ -111,38 +113,46 @@ export default function AudioRecorder({ onResult }: AudioRecorderProps) {
                 <button
                     onClick={isRecording ? stopRecording : startRecording}
                     disabled={isProcessing}
-                    className={`relative z-10 w-32 h-32 rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0_30px_rgba(0,240,255,0.2)] 
+                    className={`relative z-10 w-40 h-40 rounded-full flex items-center justify-center transition-all duration-500 shadow-2xl
             ${isRecording
-                            ? 'bg-red-500 hover:bg-red-600 shadow-[0_0_50px_rgba(239,68,68,0.5)] scale-110'
-                            : 'bg-gradient-to-br from-pulse-deep to-bg-ocean border-2 border-pulse-glow hover:scale-105 hover:shadow-[0_0_40px_rgba(0,240,255,0.4)]'
+                            ? 'bg-gradient-to-br from-red-500 to-red-700 shadow-[0_0_50px_rgba(239,68,68,0.5)] scale-100 ring-4 ring-red-400/30'
+                            : 'bg-gradient-to-br from-[#0F172A] to-[#1E293B] border border-pulse-gold/30 hover:border-pulse-gold hover:shadow-[0_0_60px_rgba(212,175,55,0.3)] hover:scale-105'
                         }
           `}
                 >
                     {isProcessing ? (
-                        <Loader2 className="w-12 h-12 text-pulse-glow animate-spin" />
+                        <Loader2 className="w-16 h-16 text-pulse-gold animate-spin backdrop-blur-md" />
                     ) : isRecording ? (
-                        <Square className="w-10 h-10 text-white fill-current" />
+                        <Square className="w-12 h-12 text-white fill-current drop-shadow-md" />
                     ) : (
-                        <AudioLines className="w-12 h-12 text-pulse-glow" />
+                        // AudioLines Icon with Gradient Effect
+                        <div className="relative">
+                            <AudioLines className="w-16 h-16 text-pulse-gold drop-shadow-[0_0_15px_rgba(212,175,55,0.5)]" />
+                        </div>
                     )}
                 </button>
             </div>
 
-            {/* Status Text */}
-            <p className={`mt-8 font-medium tracking-wide text-lg transition-colors duration-300 ${isRecording ? 'text-red-400 animate-pulse' : 'text-pulse-glow/80'}`}>
-                {isProcessing
-                    ? "Sedang Menganalisis..."
-                    : isRecording
-                        ? "Sedang Merekod... (Baca Al-Fatihah)"
-                        : "Tekan untuk Mula"}
-            </p>
+            {/* Helper Text */}
+            <div className="mt-10 text-center space-y-2">
+                <p className={`font-semibold tracking-wide text-xl transition-colors duration-300 ${isRecording ? 'text-red-400 animate-pulse' : 'text-slate-200'}`}>
+                    {isProcessing ? "Analyzing Recitation..." : isRecording ? "Recording in progress..." : "Tap to Recite"}
+                </p>
+                {!isRecording && !isProcessing && (
+                    <p className="text-pulse-gold/60 text-sm font-light tracking-widest uppercase">Start with Al-Fatihah</p>
+                )}
+            </div>
 
             {/* Error Message */}
             {errorMsg && (
-                <div className="mt-6 flex items-center gap-2 text-red-400 bg-red-500/10 px-4 py-3 rounded-lg border border-red-500/20 animate-in fade-in slide-in-from-top-2">
-                    <AlertCircle className="w-5 h-5" />
-                    <span className="text-sm">{errorMsg}</span>
-                </div>
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-6 flex items-center gap-3 text-red-200 bg-red-900/40 px-5 py-3 rounded-full border border-red-500/30 backdrop-blur-md"
+                >
+                    <AlertCircle className="w-5 h-5 text-red-400" />
+                    <span className="text-sm font-medium">{errorMsg}</span>
+                </motion.div>
             )}
         </div>
     );
