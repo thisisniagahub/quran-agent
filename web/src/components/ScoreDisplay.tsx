@@ -1,37 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { CheckCircle2, XCircle, FileText, Eye, EyeOff, Play, Pause, Volume2, Award, BarChart2, BookOpen } from 'lucide-react';
+import { CheckCircle2, XCircle, FileText, Eye, EyeOff, Play, Pause, Volume2, Award, BarChart2, BookOpen, Quote } from 'lucide-react';
 import { motion, AnimatePresence, animate } from 'framer-motion';
 
-const REFERENCE_TEXT = "بسم الله الرحمن الرحيم الحمد لله رب العالمين الرحمن الرحيم مالك يوم الدين اياك نعبد واياك نستعين اهدنا الصراط المستقيم صراط الذين انعمت عليهم غير المغضوب عليهم ولا الضالين";
-
-// Helper Component for Counting Animation
-function Counter({ value }: { value: number }) {
-    const nodeRef = useRef<HTMLSpanElement>(null);
-
-    useEffect(() => {
-        const node = nodeRef.current;
-        if (!node) return;
-
-        const controls = animate(0, value, {
-            duration: 1.5,
-            ease: "easeOut",
-            onUpdate: (latest) => {
-                node.textContent = latest.toFixed(1);
-            }
-        });
-
-        return () => controls.stop();
-    }, [value]);
-
-    return <span ref={nodeRef}>{value.toFixed(1)}</span>;
-}
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export default function ScoreDisplay({ result }: { result: any }) {
+export default function ScoreDisplay({ result, referenceText, surahName }: { result: any, referenceText: string, surahName: string }) {
     const [activeTab, setActiveTab] = useState<'summary' | 'analysis'>('summary');
     const [showDebug, setShowDebug] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    // Reset tab when result changes (new recording)
+    useEffect(() => {
+        if (result) {
+            setActiveTab('summary');
+        }
+    }, [result]);
 
     const analysis = result?.analysis || {};
     const audioInfo = result?.audio_info || {};
@@ -83,7 +66,7 @@ export default function ScoreDisplay({ result }: { result: any }) {
     }
 
     const renderDiff = () => {
-        const refWords = REFERENCE_TEXT.split(" ");
+        const refWords = referenceText.split(" ");
         const userWords = userTranscription.split(" ");
 
         return (
@@ -116,8 +99,49 @@ export default function ScoreDisplay({ result }: { result: any }) {
         );
     };
 
-    if (!result) return null;
+    // --- IDLE STATE: TELEPROMPTER MODE ---
+    if (!result) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                key="teleprompter"
+                className="w-full max-w-3xl"
+            >
+                {/* Header */}
+                <div className="flex items-center gap-3 mb-6 opacity-80">
+                    <Quote className="w-5 h-5 text-pulse-gold flipped-x scale-x-[-1]" />
+                    <span className="text-sm font-bold tracking-widest text-pulse-gold uppercase">Reading Mode</span>
+                </div>
 
+                {/* Card */}
+                <div className="bg-black/30 backdrop-blur-md rounded-[2.5rem] p-8 md:p-12 border border-white/10 shadow-2xl relative overflow-hidden group">
+                    {/* Glow Effect */}
+                    <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-pulse-gold/5 blur-[100px] rounded-full pointer-events-none -translate-y-1/2 translate-x-1/2 group-hover:bg-pulse-gold/10 transition-colors duration-1000" />
+
+                    <div className="relative z-10 flex flex-col gap-6">
+                        <div className="text-center space-y-2">
+                            <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-[0.2em]">Surah Selection</h3>
+                            <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight">{surahName}</h2>
+                        </div>
+
+                        <div className="w-16 h-[1px] bg-gradient-to-r from-transparent via-pulse-gold/50 to-transparent mx-auto my-4" />
+
+                        <p className="text-2xl md:text-4xl font-arabic text-center leading-[2.5] text-white/90 drop-shadow-lg" dir="rtl">
+                            {referenceText}
+                        </p>
+
+                        <p className="text-center text-zinc-500 text-xs mt-8 flex items-center justify-center gap-2">
+                            <span className="animate-pulse w-2 h-2 rounded-full bg-pulse-gold"></span>
+                            Press mic to verify your recitation
+                        </p>
+                    </div>
+                </div>
+            </motion.div>
+        );
+    }
+
+    // --- RESULT STATE ---
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -136,8 +160,8 @@ export default function ScoreDisplay({ result }: { result: any }) {
                 <button
                     onClick={() => setActiveTab('summary')}
                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold tracking-wide transition-all duration-300 ${activeTab === 'summary'
-                        ? 'bg-pulse-deep/20 text-pulse-glow shadow-inner border border-pulse-deep/30'
-                        : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
+                            ? 'bg-pulse-deep/20 text-pulse-glow shadow-inner border border-pulse-deep/30'
+                            : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
                         }`}
                 >
                     <BarChart2 className="w-4 h-4" />
@@ -146,8 +170,8 @@ export default function ScoreDisplay({ result }: { result: any }) {
                 <button
                     onClick={() => setActiveTab('analysis')}
                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold tracking-wide transition-all duration-300 ${activeTab === 'analysis'
-                        ? 'bg-pulse-gold/10 text-pulse-gold shadow-inner border border-pulse-gold/20'
-                        : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
+                            ? 'bg-pulse-gold/10 text-pulse-gold shadow-inner border border-pulse-gold/20'
+                            : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
                         }`}
                 >
                     <BookOpen className="w-4 h-4" />
@@ -243,7 +267,7 @@ export default function ScoreDisplay({ result }: { result: any }) {
                                     </div>
                                     <div>
                                         <h3 className="text-white text-sm font-bold uppercase tracking-wide">Semakan Bacaan</h3>
-                                        <p className="text-[10px] text-zinc-500">Surah Al-Fatihah</p>
+                                        <p className="text-[10px] text-zinc-500">{surahName}</p>
                                     </div>
                                 </div>
 
@@ -288,4 +312,26 @@ export default function ScoreDisplay({ result }: { result: any }) {
             </div>
         </motion.div>
     );
+}
+
+// Helper for Counter
+function Counter({ value }: { value: number }) {
+    const nodeRef = useRef<HTMLSpanElement>(null);
+
+    useEffect(() => {
+        const node = nodeRef.current;
+        if (!node) return;
+
+        const controls = animate(0, value, {
+            duration: 1.5,
+            ease: "easeOut",
+            onUpdate: (latest) => {
+                node.textContent = latest.toFixed(1);
+            }
+        });
+
+        return () => controls.stop();
+    }, [value]);
+
+    return <span ref={nodeRef}>{value.toFixed(1)}</span>;
 }
