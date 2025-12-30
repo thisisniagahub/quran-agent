@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CheckCircle2, XCircle, FileText, Eye, EyeOff, Play, Pause, Volume2, Award, BarChart2, BookOpen } from 'lucide-react';
-import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
+import { motion, AnimatePresence, animate } from 'framer-motion';
 
 const REFERENCE_TEXT = "بسم الله الرحمن الرحيم الحمد لله رب العالمين الرحمن الرحيم مالك يوم الدين اياك نعبد واياك نستعين اهدنا الصراط المستقيم صراط الذين انعمت عليهم غير المغضوب عليهم ولا الضالين";
 
@@ -136,8 +136,8 @@ export default function ScoreDisplay({ result }: { result: any }) {
                 <button
                     onClick={() => setActiveTab('summary')}
                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold tracking-wide transition-all duration-300 ${activeTab === 'summary'
-                            ? 'bg-pulse-deep/20 text-pulse-glow shadow-inner border border-pulse-deep/30'
-                            : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
+                        ? 'bg-pulse-deep/20 text-pulse-glow shadow-inner border border-pulse-deep/30'
+                        : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
                         }`}
                 >
                     <BarChart2 className="w-4 h-4" />
@@ -146,8 +146,8 @@ export default function ScoreDisplay({ result }: { result: any }) {
                 <button
                     onClick={() => setActiveTab('analysis')}
                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold tracking-wide transition-all duration-300 ${activeTab === 'analysis'
-                            ? 'bg-pulse-gold/10 text-pulse-gold shadow-inner border border-pulse-gold/20'
-                            : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
+                        ? 'bg-pulse-gold/10 text-pulse-gold shadow-inner border border-pulse-gold/20'
+                        : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
                         }`}
                 >
                     <BookOpen className="w-4 h-4" />
