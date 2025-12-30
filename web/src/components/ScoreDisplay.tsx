@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { CheckCircle2, AlertTriangle, XCircle, FileText, Eye, EyeOff, Play, Pause, Volume2, Award, Info } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, FileText, Eye, EyeOff, Play, Pause, Volume2, Award, Info, BarChart2, BookOpen } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const REFERENCE_TEXT = "بسم الله الرحمن الرحيم الحمد لله رب العالمين الرحمن الرحيم مالك يوم الدين اياك نعبد واياك نستعين اهدنا الصراط المستقيم صراط الذين انعمت عليهم غير المغضوب عليهم ولا الضالين";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function ScoreDisplay({ result }: { result: any }) {
+    const [activeTab, setActiveTab] = useState<'summary' | 'analysis'>('summary');
     const [showDebug, setShowDebug] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -34,7 +36,7 @@ export default function ScoreDisplay({ result }: { result: any }) {
         }
     }, [audioRef]);
 
-    // --- Logic & Premium Styling ---
+    // --- Logic & Style Definitions ---
     let statusColor = "text-red-400";
     let statusBg = "bg-gradient-to-br from-red-900/40 to-black/60 border-red-500/20";
     let ringColor = "border-red-500/20";
@@ -63,7 +65,7 @@ export default function ScoreDisplay({ result }: { result: any }) {
         const userWords = userTranscription.split(" ");
 
         return (
-            <div className="flex flex-wrap gap-3 justify-end leading-loose" dir="rtl">
+            <div className="flex flex-wrap gap-2 md:gap-3 justify-end leading-loose" dir="rtl">
                 {refWords.map((word, index) => {
                     const userWord = userWords[index] || "";
                     const isMatch = userWord.includes(word) || word.includes(userWord);
@@ -71,10 +73,10 @@ export default function ScoreDisplay({ result }: { result: any }) {
                     return (
                         <span
                             key={index}
-                            className={`px-3 py-1.5 rounded-xl text-2xl md:text-3xl font-arabic transition-all duration-300
+                            className={`px-2 py-1 md:px-3 md:py-1.5 rounded-lg text-xl md:text-3xl font-arabic transition-all duration-300
                 ${isMatch
-                                    ? "text-emerald-400"
-                                    : "text-red-400 line-through decoration-red-500/40 decoration-2 opacity-80"
+                                    ? "text-emerald-400 bg-emerald-500/5 group-hover:bg-emerald-500/10"
+                                    : "text-red-400 bg-red-500/5 group-hover:bg-red-500/10 line-through decoration-red-500/40 decoration-2 opacity-80"
                                 }
               `}
                         >
@@ -86,121 +88,162 @@ export default function ScoreDisplay({ result }: { result: any }) {
         );
     };
 
+    if (!result) return null; // Don't render if no result
+
     return (
-        <div className="w-full animate-in fade-in slide-in-from-bottom-6 duration-1000">
+        <div className="w-full max-w-3xl animate-in fade-in slide-in-from-bottom-6 duration-1000">
             {audioUrl && <audio ref={audioRef} src={audioUrl} />}
 
-            {/* MAIN CARD */}
-            <div className={`relative overflow-hidden rounded-[2rem] border backdrop-blur-xl p-8 transition-all duration-500 hover:shadow-2xl ${statusBg} ${ringColor} shadow-xl`}>
-
-                {/* Detail Header */}
-                <div className="flex flex-col md:flex-row items-center justify-between gap-10">
-
-                    {/* Score Circle */}
-                    <div className="relative group">
-                        {/* Outer Glow Ring */}
-                        <div className={`absolute -inset-4 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity duration-700 ${statusColor.replace('text-', 'bg-')}`}></div>
-
-                        <div className={`relative w-40 h-40 rounded-full border-[8px] ${ringColor} flex flex-col items-center justify-center bg-black/40 backdrop-blur-2xl shadow-inner`}>
-                            <span className={`text-6xl font-bold tracking-tighter ${statusColor}`}>
-                                {typeof qwer === 'number' ? qwer.toFixed(1) : "0.0"}
-                            </span>
-                            <span className="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-bold mt-2">Q-WER</span>
-                        </div>
-                    </div>
-
-                    {/* Feedback Logic */}
-                    <div className="flex-1 text-center md:text-left space-y-6">
-                        <div>
-                            <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
-                                <Icon className={`w-8 h-8 ${statusColor}`} />
-                                <h2 className={`text-3xl md:text-4xl font-bold tracking-tight text-white`}>{statusText}</h2>
-                            </div>
-                            <p className="text-zinc-400 text-lg font-light leading-relaxed">{statusSub}</p>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex flex-wrap gap-4 justify-center md:justify-start">
-                            {/* Play Button */}
-                            {audioUrl ? (
-                                <button
-                                    onClick={togglePlay}
-                                    className="bg-pulse-gold hover:bg-yellow-400 text-black px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-transform hover:scale-105 active:scale-95 shadow-lg shadow-yellow-500/20"
-                                >
-                                    {isPlaying ? <Pause className="w-5 h-5 fill-black" /> : <Play className="w-5 h-5 fill-black" />}
-                                    <span className="uppercase text-xs tracking-wider">Replay Recitation</span>
-                                </button>
-                            ) : (
-                                <div className="bg-white/5 px-6 py-3 rounded-xl flex items-center gap-2 text-white/20">
-                                    <Volume2 className="w-5 h-5" />
-                                    <span className="uppercase text-xs tracking-wider">No Audio</span>
-                                </div>
-                            )}
-
-                            {/* Stats Chip */}
-                            <div className="bg-black/40 px-5 py-3 rounded-xl border border-white/5 flex items-center gap-3">
-                                <span className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Errors</span>
-                                <span className="text-xl font-mono text-white">{analysis.total_errors || 0}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            {/* --- TAB NAVIGATION --- */}
+            <div className="flex p-1.5 bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 mb-6 sticky top-20 z-40 shadow-xl">
+                <button
+                    onClick={() => setActiveTab('summary')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold tracking-wide transition-all duration-300 ${activeTab === 'summary'
+                            ? 'bg-pulse-deep/20 text-pulse-glow shadow-inner border border-pulse-deep/30'
+                            : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
+                        }`}
+                >
+                    <BarChart2 className="w-4 h-4" />
+                    RINGKASAN
+                </button>
+                <button
+                    onClick={() => setActiveTab('analysis')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold tracking-wide transition-all duration-300 ${activeTab === 'analysis'
+                            ? 'bg-pulse-gold/10 text-pulse-gold shadow-inner border border-pulse-gold/20'
+                            : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
+                        }`}
+                >
+                    <BookOpen className="w-4 h-4" />
+                    ANALISIS AYAT
+                </button>
             </div>
 
-            {/* ANALYSIS CARD (The Mushaf View) */}
-            <div className="mt-8 bg-[#0F1523]/80 rounded-[2rem] border border-white/5 overflow-hidden backdrop-blur-lg relative group">
+            <div className="relative min-h-[400px]">
+                <AnimatePresence mode="wait">
 
-                {/* Subtle Pattern Overlay */}
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/arabesque.png')] opacity-[0.03] pointer-events-none mix-blend-overlay"></div>
+                    {/* --- TAB 1: SUMMARY --- */}
+                    {activeTab === 'summary' && (
+                        <motion.div
+                            key="summary"
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            transition={{ duration: 0.3 }}
+                            className={`relative overflow-hidden rounded-[2rem] border backdrop-blur-xl p-8 transition-all duration-500 ${statusBg} ${ringColor} shadow-2xl`}
+                        >
+                            <div className="flex flex-col items-center text-center gap-8">
+                                {/* Header Status */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-center gap-3">
+                                        <Icon className={`w-8 h-8 ${statusColor}`} />
+                                        <h2 className={`text-3xl font-bold tracking-tight text-white`}>{statusText}</h2>
+                                    </div>
+                                    <p className="text-zinc-400 text-sm font-light leading-relaxed max-w-sm mx-auto">{statusSub}</p>
+                                </div>
 
-                <div className="p-6 border-b border-white/5 flex justify-between items-center bg-black/20">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-pulse-gold/20 p-2 rounded-lg">
-                            <FileText className="w-5 h-5 text-pulse-gold" />
-                        </div>
-                        <div>
-                            <h3 className="text-white font-semibold flex items-center gap-2">Verse Analysis</h3>
-                            <p className="text-xs text-zinc-500">Surah Al-Fatihah</p>
-                        </div>
-                    </div>
+                                {/* Large Score Circle */}
+                                <div className="relative group my-4">
+                                    <div className={`absolute -inset-6 rounded-full blur-3xl opacity-20 group-hover:opacity-40 transition-opacity duration-700 ${statusColor.replace('text-', 'bg-')}`}></div>
+                                    <div className={`relative w-48 h-48 rounded-full border-[6px] ${ringColor} flex flex-col items-center justify-center bg-black/40 backdrop-blur-2xl shadow-inner`}>
+                                        <span className={`text-7xl font-bold tracking-tighter ${statusColor}`}>
+                                            {typeof qwer === 'number' ? qwer.toFixed(1) : "0.0"}
+                                        </span>
+                                        <span className="text-[10px] text-zinc-500 uppercase tracking-[0.3em] font-bold mt-2">Q-WER SCORE</span>
+                                    </div>
+                                </div>
 
-                    <button
-                        onClick={() => setShowDebug(!showDebug)}
-                        className="text-xs flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5"
-                    >
-                        {showDebug ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        <span>Raw Data</span>
-                    </button>
-                </div>
+                                {/* Action Buttons Row */}
+                                <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+                                    {/* Play Button */}
+                                    {audioUrl ? (
+                                        <button
+                                            onClick={togglePlay}
+                                            className="flex-1 bg-pulse-gold hover:bg-yellow-400 text-black px-6 py-4 rounded-xl font-bold flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg shadow-yellow-500/20 group"
+                                        >
+                                            {isPlaying ? <Pause className="w-5 h-5 fill-black" /> : <Play className="w-5 h-5 fill-black" />}
+                                            <span className="uppercase text-xs tracking-wider">Dengar Semula (Talaqqi)</span>
+                                        </button>
+                                    ) : (
+                                        <div className="flex-1 bg-white/5 px-6 py-4 rounded-xl flex items-center justify-center gap-2 text-white/20">
+                                            <Volume2 className="w-5 h-5" />
+                                            <span className="uppercase text-xs tracking-wider">No Audio</span>
+                                        </div>
+                                    )}
 
-                <div className="p-8 md:p-10">
-                    {/* Legend */}
-                    <div className="flex justify-center gap-8 mb-8 text-xs font-medium uppercase tracking-widest text-zinc-500">
-                        <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]"></span>
-                            <span>Correct</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-red-400 shadow-[0_0_10px_rgba(248,113,113,0.5)]"></span>
-                            <span>Needs Work</span>
-                        </div>
-                    </div>
+                                    {/* Stats Button */}
+                                    <div className="flex-1 bg-black/40 px-6 py-4 rounded-xl border border-white/5 flex items-center justify-center gap-3">
+                                        <span className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Total Errors:</span>
+                                        <span className={`text-xl font-mono ${analysis.total_errors > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                                            {analysis.total_errors || 0}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
 
-                    {/* THE QURAN TEXT */}
-                    <div className="bg-[#0a0f1c] rounded-2xl p-8 border border-white/5 shadow-inner">
-                        {renderDiff()}
-                    </div>
-                </div>
+                    {/* --- TAB 2: ANALYSIS (DIFF) --- */}
+                    {activeTab === 'analysis' && (
+                        <motion.div
+                            key="analysis"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.3 }}
+                            className="bg-[#0F1523]/90 rounded-[2rem] border border-white/5 overflow-hidden backdrop-blur-lg relative group min-h-[500px]"
+                        >
+                            {/* Pattern Overlay */}
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/arabesque.png')] opacity-[0.03] pointer-events-none mix-blend-overlay"></div>
 
-                {/* Debug Panel */}
-                {showDebug && (
-                    <div className="bg-black p-6 text-xs font-mono text-green-400/70 border-t border-white/10 break-all leading-relaxed">
-                        <div className="flex items-center gap-2 mb-2 text-white/40 uppercase tracking-widest text-[10px]">
-                            <Info className="w-3 h-3" /> AI Transcription Output
-                        </div>
-                        &quot;{userTranscription}&quot;
-                    </div>
-                )}
+                            <div className="p-5 border-b border-white/5 flex justify-between items-center bg-black/30">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-pulse-gold/10 p-2 rounded-lg border border-pulse-gold/20">
+                                        <FileText className="w-5 h-5 text-pulse-gold" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-white text-sm font-bold uppercase tracking-wide">Semakan Bacaan</h3>
+                                        <p className="text-[10px] text-zinc-500">Surah Al-Fatihah</p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => setShowDebug(!showDebug)}
+                                    className="text-[10px] flex items-center gap-1.5 text-zinc-600 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5"
+                                >
+                                    {showDebug ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                    <span>Debug</span>
+                                </button>
+                            </div>
+
+                            <div className="p-6 md:p-8">
+                                {/* Legend */}
+                                <div className="flex justify-center gap-6 mb-6 text-[10px] font-bold uppercase tracking-widest text-zinc-500 bg-black/20 py-2 rounded-full mx-auto max-w-xs border border-white/5">
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]"></span>
+                                        <span>Tepat</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.5)]"></span>
+                                        <span>Salah / Tertinggal</span>
+                                    </div>
+                                </div>
+
+                                {/* MUSHAF VIEW */}
+                                <div className="bg-[#0a0f1c] rounded-2xl p-6 md:p-8 border border-white/5 shadow-inner">
+                                    {renderDiff()}
+                                </div>
+                            </div>
+
+                            {/* Debug Panel */}
+                            {showDebug && (
+                                <div className="bg-black p-6 text-xs font-mono text-zinc-500 border-t border-white/10 break-all leading-relaxed">
+                                    RAW AI INPUT: &quot;{userTranscription}&quot;
+                                </div>
+                            )}
+                        </motion.div>
+                    )}
+
+                </AnimatePresence>
             </div>
         </div>
     );
