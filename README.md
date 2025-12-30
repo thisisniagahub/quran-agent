@@ -1,7 +1,7 @@
 
 # 📖 Quran Pulse: Acoustic-First AI Tutor
 
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen) ![Tech Stack](https://img.shields.io/badge/stack-TypeScript%20%7C%20Python%20%7C%20PyTorch-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Compliance](https://img.shields.io/badge/Tajweed-Scholar%20Verified-gold)
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen) ![Tech Stack](https://img.shields.io/badge/stack-TypeScript%20%7C%20FastAPI%20%7C%20Whisper-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Compliance](https://img.shields.io/badge/Tajweed-Scholar%20Verified-gold)
 
 > **Beyond Semantic Accuracy.** An autonomous Quran teaching agent designed to exceed generic ASR models by focusing on *acoustic precision* (Tajweed), *articulatory features* (Makhraj), and *Malaysian learner context*.
 
@@ -28,26 +28,24 @@ The system is built on a hybrid **Python (Core Engine)** and **TypeScript (Agent
 
 ```mermaid
 graph TD
-    A[User Audio] --> B(Preprocessing)
-    B --> C{Core Engine}
-    C -->|Acoustic Feat| D[Formant & Pitch Analysis]
-    C -->|Phonemes| E[Forced Alignment / Wav2Vec2]
+    A[User Audio] --> B(Preprocessing & Normalization)
+    B --> C{Core Engine - FastAPI}
+    C -->|ASR| D[Whisper Small]
+    C -->|Text| E[Arabic Utils]
     
     D & E --> F[Q-WER Calculator]
-    F --> G[Intelligence Agent]
-    G -->|Look up| H[(User Memory & Profile)]
-    G -->|Decision| I[Pedagogy Policy]
-    
-    I --> J[Actionable Feedback API]
+    F --> G[Intelligence Bridge]
+    G --> H[User Feedback]
 
 ```
 
 ### Directory Map
 
-* `core_engine/`: The "Ears". Handles heavy signal processing (PyTorch/ONNX).
-* `intelligence/`: The "Brain". Manages User Memory, Pedagogy Policy, and Q-WER Metrics.
-* `api/`: OpenAPI 3.0 specification for frontend integration.
-* `dataset/`: Specifications for the "Golden Standard" Malaysian dataset.
+* `main.py`: The Core API Entry Point (FastAPI).
+* `models/`: Contains the AI Logic (`transcriber.py` with Whisper Small).
+* `preprocessing/`: Audio cleaning and Arabic Normalization logic (`arabic_utils.py`).
+* `agent/`: TypeScript Bridge code to connect frontend agents to the Python backend.
+* `dataset/`: Ground truth text data.
 
 ---
 
@@ -55,88 +53,62 @@ graph TD
 
 Unlike standard WER, Q-WER applies dynamic weights based on the severity of the theological error:
 
-**Weight Configuration:**
-
-* **Makhraj (Articulation Point):** `3.0x` (Critical - Changes meaning/Lahnan Jaliyy)
-* **Tajweed (Rules):** `2.5x` (High - Ghunnah, Idgham, Qalqalah)
-* **Harakat (Vowels):** `2.0x` (Medium - Timing/Duration)
-* **Rhythm/Fluency:** `1.0x` (Low - Breath control)
-
-*Note: Weights adapt dynamically based on User Level (Beginner vs Advanced).*
+* **Makhraj (Articulation Point):** `3.0x` (Critical - Changes meaning)
+* **Tajweed (Rules):** `2.5x` (High - Ghunnah, Idgham)
+* **Harakat (Vowels):** `2.0x` (Medium - Timing)
 
 ---
 
-## 🚀 Getting Started
+## 🚀 How to Run
+
+Follow these steps to get the system running locally.
 
 ### Prerequisites
 
 * Python 3.9+
 * Node.js 18+
-* FFmpeg (for audio processing)
 
-### Installation
+### Step 1: Install Python Dependencies
 
-1. **Clone the repository**
 ```bash
-git clone [https://github.com/thisisniagahub/quran-agent.git](https://github.com/thisisniagahub/quran-agent.git)
-cd quran-agent
-
-```
-
-
-2. **Setup Core Engine (Python)**
-```bash
-cd core_engine
 pip install -r requirements.txt
-python models/export_onnx.py  # Optimize models
-
 ```
 
+### Step 2: Start the Server
 
-3. **Setup Intelligence Agent (TypeScript)**
+Run the FastAPI backend.
+*Note: The first run will automatically download the Whisper 'small' model (~460MB).*
+
 ```bash
-cd ../intelligence
-npm install
-npm run build
-
+uvicorn main:app --reload
 ```
 
+You will see: `Uvicorn running on http://0.0.0.0:8000`
 
-4. **Run the Validation Suite**
+### Step 3: Run the Test Agent
+
+Open a new terminal to test the connection using our TypeScript bridge.
+
 ```bash
-# Runs the comparison against Tarteel/Whisper baselines
-python ../evaluation/benchmarks.py
-
+npx ts-node agent/test_connection.ts
 ```
 
+Expected Output:
 
+```
+✅ AI BERJAYA MENDENGAR!
+📊 Markah Q-WER: 20.5 (example)
+```
 
 ---
 
 ## 📜 Compliance & Ethics
 
-* **Scholar Validation:** All hardcoded rules in `schemas/` are validated against Riwayah Hafs 'an 'Asim.
-* **Malaysian Context:** Adheres to standards referenced in *Akta 505 - Akta Pentadbiran Undang-Undang Islam*.
-* **Privacy:** Audio data is processed locally (Edge AI ready) where possible to protect user privacy.
-
----
-
-## 🤝 Contributing
-
-We welcome contributions, especially in:
-
-1. **Dataset Labeling:** Validating "Ghunnah" vs "No Ghunnah" timestamps.
-2. **Acoustic Modeling:** Fine-tuning the Malaysian accent adapter.
-
-See `CONTRIBUTING.md` for details.
+* **Scholar Validation:** Validated against Riwayah Hafs 'an 'Asim.
+* **Privacy:** Audio data is processed locally.
 
 ---
 
 ## 📄 License
 
 MIT License - Open for Educational Innovation.
-EOF
-
-```
-
-```

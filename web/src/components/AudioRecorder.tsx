@@ -1,0 +1,155 @@
+"use client";
+import React, { useState, useRef } from 'react';
+import { AudioLines, Square, Loader2, AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import axios from 'axios';
+
+import { AudioAnalysisResponse } from '@/types/api';
+
+interface AudioRecorderProps {
+    onResult: (data: AudioAnalysisResponse) => void;
+}
+
+export default function AudioRecorder({ onResult }: AudioRecorderProps) {
+    const [isRecording, setIsRecording] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const chunksRef = useRef<Blob[]>([]);
+
+    const startRecording = async () => {
+        setErrorMsg(null);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+            chunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) chunksRef.current.push(e.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                setIsProcessing(true);
+                // Gabungkan chunk audio menjadi satu fail Blob
+                const audioBlob = new Blob(chunksRef.current, { type: 'audio/wav' });
+
+                // Generate Local URL for playback (Talaqqi Mode)
+                const audioUrl = URL.createObjectURL(audioBlob);
+
+                // Buat FormData untuk dihantar ke Backend
+                const formData = new FormData();
+                // Penting: Backend perlukan nama fail dengan extension .wav atau .mp3
+                const file = new File([audioBlob], "recording.wav", { type: "audio/wav" });
+                formData.append('file', file);
+
+                try {
+                    // Panggil API Python (FastAPI)
+                    const response = await axios.post('http://localhost:8000/analyze/audio', formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' },
+                    });
+
+                    console.log("Response dari AI:", response.data);
+
+                    // Combine backend data with local audio URL
+                    const finalResult: AudioAnalysisResponse = {
+                        ...response.data,
+                        audioUrl: audioUrl
+                    };
+
+                    onResult(finalResult);
+
+                } catch (error: unknown) {
+                    console.error("Error analyzing audio:", error);
+                    let message = "Gagal menyambung ke AI.";
+
+                    if (axios.isAxiosError(error)) {
+                        if (error.code === "ERR_NETWORK") {
+                            message = "Gagal hubungi server. Pastikan Backend (Port 8000) hidup!";
+                        } else if (error.response) {
+                            message = `Server Error: ${error.response.status} - ${error.response.data?.detail || "Unknown"}`;
+                        }
+                    }
+
+                    setErrorMsg(message);
+                } finally {
+                    setIsProcessing(false);
+                }
+            };
+
+            mediaRecorder.start();
+            setIsRecording(true);
+        } catch (err) {
+            console.error("Error accessing microphone:", err);
+            setErrorMsg("Sila benarkan akses mikrofon untuk meneruskan.");
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+            // Matikan track audio supaya lampu mic browser padam
+            mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        }
+    };
+
+    return (
+        <div className="flex flex-col items-center justify-center py-10 w-full max-w-md mx-auto">
+            <div className="relative">
+                {/* Animasi Ombak/Pulse Nadi (Hanya bila recording) */}
+                {isRecording && (
+                    <>
+                        <motion.div
+                            animate={{ scale: [1, 2.5], opacity: [0.5, 0] }}
+                            transition={{ repeat: Infinity, duration: 1.5, ease: "easeOut" }}
+                            className="absolute inset-0 bg-pulse-glow/30 rounded-full blur-xl"
+                        />
+                        <motion.div
+                            animate={{ scale: [1, 1.8], opacity: [0.6, 0] }}
+                            transition={{ repeat: Infinity, duration: 1.5, delay: 0.5, ease: "easeOut" }}
+                            className="absolute inset-0 bg-pulse-deep/40 rounded-full blur-md"
+                        />
+                    </>
+                )}
+
+                {/* Butang Utama */}
+                <button
+                    onClick={isRecording ? stopRecording : startRecording}
+                    disabled={isProcessing}
+                    className={`relative z-10 w-32 h-32 rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0_30px_rgba(0,240,255,0.2)] 
+            ${isRecording
+                            ? 'bg-red-500 hover:bg-red-600 shadow-[0_0_50px_rgba(239,68,68,0.5)] scale-110'
+                            : 'bg-gradient-to-br from-pulse-deep to-bg-ocean border-2 border-pulse-glow hover:scale-105 hover:shadow-[0_0_40px_rgba(0,240,255,0.4)]'
+                        }
+          `}
+                >
+                    {isProcessing ? (
+                        <Loader2 className="w-12 h-12 text-pulse-glow animate-spin" />
+                    ) : isRecording ? (
+                        <Square className="w-10 h-10 text-white fill-current" />
+                    ) : (
+                        <AudioLines className="w-12 h-12 text-pulse-glow" />
+                    )}
+                </button>
+            </div>
+
+            {/* Teks Status */}
+            <p className={`mt-8 font-medium tracking-wide text-lg transition-colors duration-300 ${isRecording ? 'text-red-400 animate-pulse' : 'text-pulse-glow/80'}`}>
+                {isProcessing
+                    ? "Sedang Menganalisis..."
+                    : isRecording
+                        ? "Sedang Merekod... (Baca Al-Fatihah)"
+                        : "Tekan untuk Mula"}
+            </p>
+
+            {/* Mesej Error (Jika ada) */}
+            {errorMsg && (
+                <div className="mt-6 flex items-center gap-2 text-red-400 bg-red-500/10 px-4 py-3 rounded-lg border border-red-500/20 animate-in fade-in slide-in-from-top-2">
+                    <AlertCircle className="w-5 h-5" />
+                    <span className="text-sm">{errorMsg}</span>
+                </div>
+            )}
+        </div>
+    );
+}
