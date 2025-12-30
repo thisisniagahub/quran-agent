@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import AudioRecorder from "@/components/AudioRecorder";
 import ScoreDisplay from "@/components/ScoreDisplay";
 import { useState } from "react";
+import Image from "next/image";
 import { AudioAnalysisResponse } from "@/types/api";
 
 export default function Home() {
@@ -12,13 +13,28 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-bg-ocean relative overflow-hidden flex flex-col items-center bg-islamic-pattern font-sans">
 
+      {/* --- CINEMATIC WATERMARK --- */}
+      <div className="absolute inset-0 z-0 pointer-events-none flex items-center justify-center overflow-hidden">
+        <div className="relative w-[150vw] h-[150vw] opacity-5 -rotate-12 blur-sm">
+          <Image
+            src="/logo-watermark.png"
+            alt="Background Ambience"
+            fill
+            className="object-contain"
+            priority
+          />
+        </div>
+      </div>
+
       {/* Background Ambience: Gold & Blue Orbs */}
-      <div className="absolute top-[-20%] left-[-10%] w-[800px] h-[800px] bg-pulse-deep/20 rounded-full blur-[150px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[900px] h-[900px] bg-pulse-gold/10 rounded-full blur-[180px] pointer-events-none" />
-      <div className="absolute top-[20%] left-[50%] w-[600px] h-[600px] bg-pulse-glow/5 rounded-full blur-[120px] -translate-x-1/2 pointer-events-none" />
+      <div className="absolute top-[-20%] left-[-10%] w-[800px] h-[800px] bg-pulse-deep/20 rounded-full blur-[150px] pointer-events-none z-0" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[900px] h-[900px] bg-pulse-gold/10 rounded-full blur-[180px] pointer-events-none z-0" />
+      <div className="absolute top-[20%] left-[50%] w-[600px] h-[600px] bg-pulse-glow/5 rounded-full blur-[120px] -translate-x-1/2 pointer-events-none z-0" />
 
       {/* Navigation */}
-      <Navbar />
+      <div className="relative z-50 w-full">
+        <Navbar />
+      </div>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center w-full max-w-7xl mx-auto px-6 gap-16 mt-20 md:mt-0 relative z-10">
