@@ -1,8 +1,30 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CheckCircle2, XCircle, FileText, Eye, EyeOff, Play, Pause, Volume2, Award, BarChart2, BookOpen } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 
 const REFERENCE_TEXT = "بسم الله الرحمن الرحيم الحمد لله رب العالمين الرحمن الرحيم مالك يوم الدين اياك نعبد واياك نستعين اهدنا الصراط المستقيم صراط الذين انعمت عليهم غير المغضوب عليهم ولا الضالين";
+
+// Helper Component for Counting Animation
+function Counter({ value }: { value: number }) {
+    const nodeRef = useRef<HTMLSpanElement>(null);
+
+    useEffect(() => {
+        const node = nodeRef.current;
+        if (!node) return;
+
+        const controls = animate(0, value, {
+            duration: 1.5,
+            ease: "easeOut",
+            onUpdate: (latest) => {
+                node.textContent = latest.toFixed(1);
+            }
+        });
+
+        return () => controls.stop();
+    }, [value]);
+
+    return <span ref={nodeRef}>{value.toFixed(1)}</span>;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function ScoreDisplay({ result }: { result: any }) {
@@ -65,42 +87,57 @@ export default function ScoreDisplay({ result }: { result: any }) {
         const userWords = userTranscription.split(" ");
 
         return (
-            <div className="flex flex-wrap gap-2 md:gap-3 justify-end leading-loose" dir="rtl">
+            <div className="flex flex-wrap gap-2 md:gap-4 justify-end leading-loose" dir="rtl">
                 {refWords.map((word, index) => {
                     const userWord = userWords[index] || "";
                     const isMatch = userWord.includes(word) || word.includes(userWord);
 
                     return (
-                        <span
+                        <motion.span
                             key={index}
-                            className={`px-2 py-1 md:px-3 md:py-1.5 rounded-lg text-xl md:text-3xl font-arabic transition-all duration-300
+                            initial={{ opacity: 0, y: 10, filter: "blur(5px)" }}
+                            animate={isMatch
+                                ? { opacity: 1, y: 0, filter: "blur(0px)", textShadow: ["0 0 0px #34d399", "0 0 15px #34d399", "0 0 0px #34d399"] }
+                                : { opacity: 1, y: 0, filter: "blur(0px)" }
+                            }
+                            transition={{ delay: index * 0.05, duration: 0.5 }}
+                            className={`px-2 py-1 md:px-3 md:py-2 rounded-lg text-xl md:text-3xl font-arabic transition-all
                 ${isMatch
-                                    ? "text-emerald-400 bg-emerald-500/5 group-hover:bg-emerald-500/10"
-                                    : "text-red-400 bg-red-500/5 group-hover:bg-red-500/10 line-through decoration-red-500/40 decoration-2 opacity-80"
+                                    ? "text-emerald-400 bg-emerald-500/5"
+                                    : "text-red-400 bg-red-500/5 line-through decoration-red-500/40 decoration-2 opacity-80"
                                 }
               `}
                         >
                             {word}
-                        </span>
+                        </motion.span>
                     );
                 })}
             </div>
         );
     };
 
-    if (!result) return null; // Don't render if no result
+    if (!result) return null;
 
     return (
-        <div className="w-full max-w-3xl animate-in fade-in slide-in-from-bottom-6 duration-1000">
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-3xl"
+        >
             {audioUrl && <audio ref={audioRef} src={audioUrl} />}
 
             {/* --- TAB NAVIGATION --- */}
-            <div className="flex p-1.5 bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 mb-6 sticky top-20 z-40 shadow-xl">
+            <motion.div
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="flex p-1.5 bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 mb-6 sticky top-20 z-40 shadow-xl"
+            >
                 <button
                     onClick={() => setActiveTab('summary')}
                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold tracking-wide transition-all duration-300 ${activeTab === 'summary'
-                        ? 'bg-pulse-deep/20 text-pulse-glow shadow-inner border border-pulse-deep/30'
-                        : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
+                            ? 'bg-pulse-deep/20 text-pulse-glow shadow-inner border border-pulse-deep/30'
+                            : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
                         }`}
                 >
                     <BarChart2 className="w-4 h-4" />
@@ -109,14 +146,14 @@ export default function ScoreDisplay({ result }: { result: any }) {
                 <button
                     onClick={() => setActiveTab('analysis')}
                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold tracking-wide transition-all duration-300 ${activeTab === 'analysis'
-                        ? 'bg-pulse-gold/10 text-pulse-gold shadow-inner border border-pulse-gold/20'
-                        : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
+                            ? 'bg-pulse-gold/10 text-pulse-gold shadow-inner border border-pulse-gold/20'
+                            : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
                         }`}
                 >
                     <BookOpen className="w-4 h-4" />
                     ANALISIS AYAT
                 </button>
-            </div>
+            </motion.div>
 
             <div className="relative min-h-[400px]">
                 <AnimatePresence mode="wait">
@@ -125,10 +162,10 @@ export default function ScoreDisplay({ result }: { result: any }) {
                     {activeTab === 'summary' && (
                         <motion.div
                             key="summary"
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            transition={{ duration: 0.3 }}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.4, type: "spring" }}
                             className={`relative overflow-hidden rounded-[2rem] border backdrop-blur-xl p-8 transition-all duration-500 ${statusBg} ${ringColor} shadow-2xl`}
                         >
                             <div className="flex flex-col items-center text-center gap-8">
@@ -143,10 +180,14 @@ export default function ScoreDisplay({ result }: { result: any }) {
 
                                 {/* Large Score Circle */}
                                 <div className="relative group my-4">
-                                    <div className={`absolute -inset-6 rounded-full blur-3xl opacity-20 group-hover:opacity-40 transition-opacity duration-700 ${statusColor.replace('text-', 'bg-')}`}></div>
+                                    <motion.div
+                                        animate={{ scale: [1, 1.1, 1], opacity: [0.2, 0.4, 0.2] }}
+                                        transition={{ duration: 3, repeat: Infinity }}
+                                        className={`absolute -inset-6 rounded-full blur-3xl ${statusColor.replace('text-', 'bg-')}`}
+                                    />
                                     <div className={`relative w-48 h-48 rounded-full border-[6px] ${ringColor} flex flex-col items-center justify-center bg-black/40 backdrop-blur-2xl shadow-inner`}>
                                         <span className={`text-7xl font-bold tracking-tighter ${statusColor}`}>
-                                            {typeof qwer === 'number' ? qwer.toFixed(1) : "0.0"}
+                                            <Counter value={qwer} />
                                         </span>
                                         <span className="text-[10px] text-zinc-500 uppercase tracking-[0.3em] font-bold mt-2">Q-WER SCORE</span>
                                     </div>
@@ -228,7 +269,7 @@ export default function ScoreDisplay({ result }: { result: any }) {
                                     </div>
                                 </div>
 
-                                {/* MUSHAF VIEW */}
+                                {/* MUSHAF VIEW (Animated) */}
                                 <div className="bg-[#0a0f1c] rounded-2xl p-6 md:p-8 border border-white/5 shadow-inner">
                                     {renderDiff()}
                                 </div>
@@ -245,6 +286,6 @@ export default function ScoreDisplay({ result }: { result: any }) {
 
                 </AnimatePresence>
             </div>
-        </div>
+        </motion.div>
     );
 }
